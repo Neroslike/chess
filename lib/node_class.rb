@@ -30,6 +30,11 @@ class Node
     @right = nil
   end
 
+  def remove_piece
+    @piece = nil
+    @char = '    '
+  end
+
   def empty?
     @piece == '    '
   end
