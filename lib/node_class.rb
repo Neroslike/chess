@@ -7,6 +7,14 @@ class Array
   def valid?
     (self[0] > -1 && self[1] > -1) && (self[0] < 8 && self[1] < 8)
   end
+
+  def legal_move?
+    (self[0] < 8 && self[0] > -1) && (self[1] < 8 && self[1] > -1)
+  end
+
+  def diagonal?(array)
+    self[0] != array[0] && self[1] != array[1]
+  end
 end
 
 class NilClass
@@ -36,7 +44,7 @@ class Node
   end
 
   def empty?
-    @piece == '    '
+    @piece.nil?
   end
 
   def to_s
@@ -90,6 +98,7 @@ class Node
   end
 
   def traverse(to, from = self)
+    return nil unless to.valid?
     return from if from.data == to
 
     return traverse(to, from.down) if from.data[0] > to[0] 
