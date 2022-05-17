@@ -4,10 +4,6 @@ class Array
     [self[0] + arr[0], self[1] + arr[1]]
   end
 
-  def valid?
-    (self[0] > -1 && self[1] > -1) && (self[0] < 8 && self[1] < 8)
-  end
-
   def legal_move?
     (self[0] < 8 && self[0] > -1) && (self[1] < 8 && self[1] > -1)
   end
@@ -66,9 +62,9 @@ class Node
   end
 
   def populate_right(right, down, node, queue)
-    if right.valid?
+    if right.legal_move?
       node.right = Node.new(right)
-      if down.valid? && node.data[1] != 0
+      if down.legal_move? && node.data[1] != 0
         node.down = queue.shift
         node.down.up = node
       end
@@ -77,7 +73,7 @@ class Node
   end
 
   def populate_up(up, node, queue)
-    if up.valid? && node.data[1].zero?
+    if up.legal_move? && node.data[1].zero?
       node.up = Node.new(up)
       node.up.down = queue.shift
       build_graph(node.up, queue)
@@ -98,7 +94,7 @@ class Node
   end
 
   def traverse(to, from = self)
-    return nil unless to.valid?
+    return nil unless to.legal_move?
     return from if from.data == to
 
     return traverse(to, from.down) if from.data[0] > to[0] 
