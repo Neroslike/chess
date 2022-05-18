@@ -51,7 +51,7 @@ class Node
     "Node\nObject ID: #{object_id}\nData: #{@data}\nPiece: #{@piece}\nChar: #{@char}\nUp: #{@up.data}\nDown: #{@down.data}\nLeft: #{@left.data}\nRight: #{@right.data}"
   end
 
-  # Method to build the graph, we first set 3 movements variable
+  # Method to build the graph, we first set 3 movement variables
   # to prevent the board from building infinitely.
   def build_graph(node = self, queue = [])
     queue << node

@@ -1,13 +1,13 @@
 require_relative '../translation'
 class Pawn
   include Translation
-  attr_accessor :char, :moves, :name, :moved
+  attr_accessor :char, :moves, :name, :moved, :color
 
   def initialize(color)
     @char = " \u265f  ".encode('utf-8')
     @moves = nil
     @color = 'white'
-    color_behavior(color)
+    color_select(color)
     @name = 'Pawn'
     @moved = false
   end
@@ -16,7 +16,7 @@ class Pawn
     @char
   end
 
-  def color_behavior(color)
+  def color_select(color)
     if color == 'black'
       @char = " \u265f  ".encode('utf-8')
       @moves = [[-1, 0], [-1, 1], [-1, -1]]
@@ -33,12 +33,14 @@ class Pawn
   end
 
   def blocked?(node)
+    # Return true if the next vertical move is blocked
     !node.traverse(node.data.add_array(@moves[0])).empty?
   end
 
   def filter_movements(move, node)
     # Return true if it can eat vertically and move diagonally without eating
-    (move.diagonal?(node.data) && node.traverse(move).empty?) || (!move.diagonal?(node.data) && !node.traverse(move).empty?)
+    cell = node.traverse(move)
+    (move.diagonal?(node.data) && cell.empty?) || (!move.diagonal?(node.data) && !cell.empty?)
   end
 
   def show_moves(node, moves = [])
@@ -52,7 +54,4 @@ class Pawn
     @moved = true
     moves.map { |move| translate(move) }
   end
-  # Stop the pawn from eating in vertical. Done
-  # Stop the pawn from moving diagonally unless it can eat. Done
-  # Stop all pieces except the knight from jumping above other pieces
 end
