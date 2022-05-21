@@ -12,10 +12,6 @@ class Pawn
     @moved = false
   end
 
-  def inspect
-    @char
-  end
-
   def color_select(color)
     if color == 'black'
       @char = " \u265f  ".encode('utf-8')

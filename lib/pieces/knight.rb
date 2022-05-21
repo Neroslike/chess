@@ -19,7 +19,7 @@ class Knight < Rook
     end
   end
 
-  def show_moves(node, moves = [])
+  def show_moves(node)
     @moves.filter_map do |move|
       cell = node.traverse(node.data.add_array(move))
       translate(cell.data) unless cell.nil?

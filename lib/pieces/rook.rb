@@ -1,7 +1,9 @@
 require_relative '../translation'
+require_relative '../build_moves'
 
 class Rook
   include Translation
+  include BuildMoves
   attr_accessor :char, :moves, :name, :moved, :color
 
   def initialize(color)
@@ -20,20 +22,5 @@ class Rook
       @char = " \u2656  ".encode('utf-8')
       @color = 'white'
     end
-  end
-
-  def build_moves(node, direction, moves = [])
-    cell = node.traverse(node.data.add_array(direction))
-    moves << translate(cell.data) unless cell.nil?
-    return moves if cell.nil? || !cell.empty?
-
-    build_moves(cell, direction, moves)
-  end
-
-  def show_moves(node, moves = [])
-    @moves.each do |move|
-      moves += build_moves(node, move)
-    end
-    moves
   end
 end

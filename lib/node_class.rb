@@ -1,4 +1,36 @@
 require 'pry-byebug'
+require 'json'
+module JSONable
+  # Check every node
+  # If it has a piece the node hash key will equal another hash
+  # that contains the instance variables for that piece
+  # else just add nil as the value for the node key
+  def to_json(obj = nil)
+    hash = {}
+    each do |node|
+      if node.piece.nil?
+        hash[node.data] = node.piece
+      else
+        hash[node.data] = {}
+        node.piece.instance_variables.each do |var|
+          hash[node.data][var] = node.piece.instance_variable_get var
+        end
+      end
+    end
+    JSON.generate(hash)
+  end
+
+  def from_json!(string)
+    JSON.parse(string).each do |var, val|
+      if val.nil?
+        @board.traverse(var.to_array).remove_piece
+      else
+        clazz = Kernel.const_get(val['@name']).new(val['@color'])
+        place_piece(translate(var.to_array), clazz)
+      end
+    end
+  end
+end
 class Array
   def add_array(arr)
     [self[0] + arr[0], self[1] + arr[1]]
@@ -13,6 +45,12 @@ class Array
   end
 end
 
+class String
+  def to_array
+    [self[1].to_i, self[4].to_i]
+  end
+end
+
 class NilClass
   def data
     ''
@@ -21,6 +59,7 @@ end
 
 class Node
   attr_accessor :piece, :data, :up, :right, :left, :down, :char
+  include JSONable
 
   @@MOVES = { up: [1, 0], down: [-1, 0], left: [0, -1], right: [0, 1] }
 
@@ -56,7 +95,10 @@ class Node
   def build_graph(node = self, queue = [])
     queue << node
     populate_right(node.data.add_array(@@MOVES[:right]), node.data.add_array(@@MOVES[:down]), node, queue)
-    node.down = queue.shift if node.data[1] == 7 && !node.data[0].zero?
+    if node.data[1] == 7 && !node.data[0].zero?
+      node.down = queue.shift
+      node.down.up = node
+    end
     populate_up(node.data.add_array(@@MOVES[:up]), node, queue)
     node
   end
@@ -66,8 +108,8 @@ class Node
       node.right = Node.new(right)
       if down.legal_move? && node.data[1] != 0
         node.down = queue.shift
-        node.down.up = node
       end
+      node.down.up = node unless node.down.nil?
       build_graph(node.right, queue).left = node
     end
   end
@@ -91,6 +133,14 @@ class Node
       node = node.down
     end
     puts output
+  end
+
+  # each method starting from 0,0
+  def each(node = self, &block)
+    block.call(node)
+    each(node.right, &block) unless node.right.nil?
+    each(node.up, &block) if !node.up.nil? && node.up.data[1].zero?
+    node
   end
 
   def traverse(to, from = self)
