@@ -72,38 +72,148 @@ class Board
     File.open("Savegames/#{string}", 'r') { |file| from_json!(file.read) }
   end
 
-  def select_piece(turn)
-    puts "White King: #{@white_king}\nBlack King: #{@black_king}"
-    puts "white check: #{check?(@white_king)}"
-    puts "black check: #{check?(@black_king)}"
-    puts 'Select a piece to move'
-    piece = translate(gets.chomp.downcase)
+  def select_piece(color)
+    puts "#{color.capitalize}'s turn"
+    puts "Select a piece to move (Or type '*' to save the game)"
+    piece = check_piece_input(color)
     node = @board.traverse(piece)
     moves = filter_enemy_moves(node.piece.show_moves(node), node)
     puts "The possible moves for the #{node.piece.name} are: #{moves}"
     puts 'Select a move'
     move = ''
+    node.piece.moved = true if node.piece.name == 'Pawn'
     loop do
       move = gets.chomp.downcase
       moves.include?(move) ? break : puts('Please enter a valid move')
     end
     save_game('before_check.json')
     move_piece(node, move)
-    # if check?(@black_king) || check?(@white_king)
-    #   puts "You can't make make that move because it checks your king"
-    #   load_game('before_check.json')
-    # end
+    restart_game if check_mate?(color)
+    check_true if check?(color)
+  end
+
+  def check_piece_input(color = 'white')
+    loop do
+      piece = gets.chomp.downcase
+      if piece == '*'
+        save_game
+        exit
+      end
+      piece = translate(piece)
+      node = @board.traverse(piece)
+      if node.empty?
+        puts 'That cell is empty, select a valid piece'
+        next
+      end
+      node.piece.color == color ? (return piece) : (puts "You can't select that piece")
+    end
   end
 
   def play_game
-    turn = 'white'
+    color = 'white'
     loop do
+      display_board
+      next if select_piece(color)
 
+      color = color == 'white' ? 'black' : 'white'
     end
+  end
+
+  def load_game?
+    puts 'Do you want to load the game? Y/N'
+    loop do
+      input = gets.chomp.downcase
+      return if input == 'n'
+      if input == 'y'
+        load_game 
+        break
+      else
+        puts 'Invalid input'
+      end
+    end
+  end
+
+  def restart_game
+    loop do
+      puts 'Do you want to play another game? Y/N'
+      restart = gets.chomp.downcase
+      if restart == 'y'
+        @board.reset_graph
+        @black_king = 'e8'
+        @white_king = 'e1'
+        build_board
+        break
+      elsif restart == 'n'
+        exit
+      else
+        puts 'Invalid input'
+      end
+    end
+  end
+
+  # Loads the game right before the move was made
+  def check_true
+    puts "You can't make make that move because it checks your king"
+    load_game('before_check.json')
+    true
+  end
+
+  # Return true if an ally piece can get in the way or eat the piece that is checking
+  def ally_help?(color)
+    all_moves = ally_moves(color)
+    danger_moves = check_moves(color)
+    danger_moves.each do |move|
+      return true if all_moves.include?(move)
+    end
+    false
+  end
+
+  def check_mate?(color)
+    if king_unable_to_move?(color) && !ally_help?(color)
+      loser = color == 'white' ? 'Black' : 'White'
+      puts "#{loser} checkmate, #{color.capitalize}'s win!"
+      display_board
+      return true
+    end
+    false
+  end
+
+  # return true
+  def king_unable_to_move?(color)
+    king = color != 'white' ? @white_king : @black_king
+    king_node = @board.traverse(translate(king))
+    moves = filter_enemy_moves(king_node.piece.show_moves(king_node), king_node)
+    threats = []
+    moves.each do |move|
+      checks = enemy_reach?(move, king_node.piece.color)
+      threats << checks unless checks.empty?
+      @board.traverse(translate(move)).remove_piece
+    end
+    moves.empty? ? false : threats.length == moves.length
+  end
+
+  # Return array of all possible moves of all the pieces of the given color
+  def ally_moves(color)
+    all_ally_moves = []
+    @board.each do |node|
+      if (!node.empty? && node.piece.color == color) && node.piece.name != 'King'
+        all_ally_moves += filter_enemy_moves(node.piece.show_moves(node), node)
+      end
+    end
+    all_ally_moves.uniq
+  end
+
+  # Calls #filter_pieces on a mock piece to determine if it's reachable by an enemy piece
+  def enemy_reach?(coordinate, color)
+    node = @board.traverse(translate(coordinate))
+    place_piece(coordinate, Pawn.new(color)) if node.empty?
+    check(filter_pieces(node), coordinate)
   end
 
   def move_piece(piece, move)
     cell = @board.traverse(translate(move))
+    @black_king = move if piece.piece.color == 'black' && piece.piece.name == 'King'
+    @white_king = move if piece.piece.color == 'white' && piece.piece.name == 'King'
     puts '================'
     puts "#{translate(piece.data).capitalize} #{piece.piece.color.capitalize} #{piece.piece.name} to #{move.capitalize} #{cell.piece.color.capitalize unless cell.empty?} #{cell.piece.name unless cell.empty?}"
     puts '================'
@@ -111,10 +221,24 @@ class Board
     piece.remove_piece
   end
 
-  def check?(king)
+  # Return true if the king of the given color is on check
+  def check?(color)
+    king = color == 'white' ? @white_king : @black_king
     !check(filter_pieces(@board.traverse(translate(king))), king).empty?
   end
 
+  # calls #check on the king of given color
+  def check_moves(color)
+    king = color == 'white' ? @white_king : @black_king
+    enemy_pieces_moves = []
+    pieces = check(filter_pieces(@board.traverse(translate(king))), king)
+    pieces.each do |piece|
+      enemy_pieces_moves += travail(piece, king)
+    end
+    enemy_pieces_moves.uniq
+  end
+
+  # Return an array of coordinates of all pieces that can reach the given node
   def filter_pieces(node)
     moves = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]
     knight_moves = [[-1, -2], [1, 2], [-2, -1], [2, 1], [1, -2], [-1, 2], [2, -1], [-2, 1]]
@@ -122,6 +246,7 @@ class Board
     filter_enemy_moves(all_moves, node)
   end
 
+  # Return array of coordinates where there are pieces that can eat the king
   def check(pieces, king)
     pieces.select do |piece|
       node = @board.traverse(translate(piece))

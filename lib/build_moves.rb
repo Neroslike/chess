@@ -28,4 +28,12 @@ module BuildMoves
     end
     pieces
   end
+
+  def travail(from, to)
+    from = @board.traverse(translate(from))
+    from.piece.moves.each do |move|
+      moves = [translate(from.data)] + build_moves(from, move)
+      return moves if moves.include?(to)
+    end
+  end
 end

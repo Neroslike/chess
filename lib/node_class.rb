@@ -103,6 +103,12 @@ class Node
     node
   end
 
+  def reset_graph
+    each do |node|
+      node.remove_piece
+    end
+  end
+
   def populate_right(right, down, node, queue)
     if right.legal_move?
       node.right = Node.new(right)

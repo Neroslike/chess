@@ -47,7 +47,7 @@ class Pawn
       coordinate = node.data.add_array(move)
       coordinate if coordinate.legal_move? && !filter_movements(coordinate, node)
     end
-    @moved = true
+    # @moved = true
     moves.map { |move| translate(move) }
   end
 end
