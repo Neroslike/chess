@@ -49,6 +49,10 @@ class String
   def to_array
     [self[1].to_i, self[4].to_i]
   end
+
+  def valid_input?
+    match?(/^([A-Z]|[a-z]\d)$|^\*$/)
+  end
 end
 
 class NilClass

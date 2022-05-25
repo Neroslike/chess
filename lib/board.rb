@@ -72,12 +72,15 @@ class Board
     File.open("Savegames/#{string}", 'r') { |file| from_json!(file.read) }
   end
 
-  def select_piece(color)
+  def select_piece(color, moves = [], node = nil)
     puts "#{color.capitalize}'s turn"
-    puts "Select a piece to move (Or type '*' to save the game)"
-    piece = check_piece_input(color)
-    node = @board.traverse(piece)
-    moves = filter_enemy_moves(node.piece.show_moves(node), node)
+    loop do
+      piece = piece_input(color)
+      node = @board.traverse(piece)
+      moves = filter_enemy_moves(node.piece.show_moves(node), node)
+      break unless moves.empty?
+      puts 'That piece has no valid movements'
+    end
     puts "The possible moves for the #{node.piece.name} are: #{moves}"
     puts 'Select a move'
     move = ''
@@ -92,20 +95,29 @@ class Board
     check_true if check?(color)
   end
 
-  def check_piece_input(color = 'white')
+  def piece_input(color)
     loop do
-      piece = gets.chomp.downcase
-      if piece == '*'
+      puts "Select a piece to move (Or type '*' to save the game)"
+      input = gets.chomp.downcase
+      return check_piece_input(input, color) if input.valid_input?
+
+      puts 'Invalid Input'
+    end
+  end
+
+  def check_piece_input(input, color = 'white')
+    loop do
+      if input == '*'
         save_game
         exit
       end
-      piece = translate(piece)
-      node = @board.traverse(piece)
+      input = translate(input)
+      node = @board.traverse(input)
       if node.empty?
         puts 'That cell is empty, select a valid piece'
         next
       end
-      node.piece.color == color ? (return piece) : (puts "You can't select that piece")
+      node.piece.color == color ? (return input) : (puts "You can't select that input")
     end
   end
 
@@ -217,8 +229,42 @@ class Board
     puts '================'
     puts "#{translate(piece.data).capitalize} #{piece.piece.color.capitalize} #{piece.piece.name} to #{move.capitalize} #{cell.piece.color.capitalize unless cell.empty?} #{cell.piece.name unless cell.empty?}"
     puts '================'
-    place_piece(move, piece.piece)
+    if pawn_on_other_side?(piece, move)
+      pawn_sacrifice(move, piece.piece.color)
+    else
+      place_piece(move, piece.piece)
+    end
     piece.remove_piece
+  end
+
+  def pawn_sacrifice(coordinate, color)
+    loop do
+      puts 'You can exchange your pawn for one of these pieces, type its number'
+      puts "1.Rook\n2.Bishop\n3.Queen\n4.Knight"
+      piece = gets.chomp.to_i
+      case piece
+      when 1
+        place_piece(coordinate, Rook.new(color))
+        return
+      when 2
+        place_piece(coordinate, Bishop.new(color))
+        return
+      when 3
+        place_piece(coordinate, Queen.new(color))
+        return
+      when 4
+        place_piece(coordinate, Knight.new(color))
+        return
+      else
+        puts 'Invalid input'
+      end
+    end
+  end
+
+  def pawn_on_other_side?(node, coordinates)
+    if node.piece.name == 'Pawn'
+      (node.piece.color == 'white' && node.data[0] == 6) || (node.piece.color == 'black' && node.data[0] == 1)
+    end
   end
 
   # Return true if the king of the given color is on check
